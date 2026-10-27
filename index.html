@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Чек-лист AV</title>
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Чек-лист AV">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Layout: iOS grouped inset list — translucent large-title header, white rounded rows on system grey; each row opens a 3D viewer, colour dots, Есть/Нет and a note */
+:root{
+  --bg:#f2f2f7; --surface:#ffffff; --fill:rgba(118,118,128,.12); --line:rgba(60,60,67,.18);
+  --fg:#000000; --muted:rgba(60,60,67,.6); --accent:#007aff;
+  --ok:#34c759; --miss:#ff3b30; --none-bg:rgba(118,118,128,.12);
+  --ok-bg:rgba(52,199,89,.15); --miss-bg:rgba(255,59,48,.13); --ok-ink:#248a3d; --miss-ink:#d70015;
+  --bar:rgba(249,249,249,.82); --seg-on:#ffffff; --stage:#f5f5f7;
+  --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,"Segoe UI",Roboto,sans-serif;
+  --sysd:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",system-ui,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --surface:#1c1c1e; --fill:rgba(118,118,128,.24); --line:rgba(84,84,88,.6);
+  --fg:#ffffff; --muted:rgba(235,235,245,.6); --accent:#0a84ff;
+  --ok:#30d158; --miss:#ff453a; --none-bg:rgba(118,118,128,.24);
+  --ok-bg:rgba(48,209,88,.2); --miss-bg:rgba(255,69,58,.2); --ok-ink:#30d158; --miss-ink:#ff6961;
+  --bar:rgba(22,22,24,.82); --seg-on:#636366; --stage:#2c2c2e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --surface:#1c1c1e; --fill:rgba(118,118,128,.24); --line:rgba(84,84,88,.6);
+  --fg:#ffffff; --muted:rgba(235,235,245,.6); --accent:#0a84ff;
+  --ok:#30d158; --miss:#ff453a; --none-bg:rgba(118,118,128,.24);
+  --ok-bg:rgba(48,209,88,.2); --miss-bg:rgba(255,69,58,.2); --ok-ink:#30d158; --miss-ink:#ff6961;
+  --bar:rgba(22,22,24,.82); --seg-on:#636366; --stage:#2c2c2e; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{color-scheme:light}
+body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--sys);font-size:17px;line-height:1.3;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::before{display:none;content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px)}
+.wrap{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+header .wrap{padding-block:12px 12px;display:grid;gap:10px}
+h1{font-family:var(--sysd);font-size:24px;font-weight:700;margin:0;letter-spacing:.01em;line-height:1.15}
+.sub{color:var(--muted);font-size:15px;margin-top:2px}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--none-bg)}
+.bar i{display:block;height:100%;transition:width .35s cubic-bezier(.2,.8,.2,1)}
+.bar .b-ok{background:var(--ok)}.bar .b-miss{background:var(--miss)}
+.stats{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:6px}
+.stats b{color:var(--fg);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.search{width:100%;height:36px;border:0;background:var(--fill);color:var(--fg);border-radius:10px;padding:0 12px 0 34px;font:inherit;font-size:17px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center;background-size:16px}
+.search::placeholder{color:var(--muted)}
+main .wrap{padding-block:12px 40px;display:grid;gap:8px}
+#list{display:grid;gap:6px}
+.note{font-size:15px;color:var(--muted);background:var(--surface);border-radius:12px;padding:12px 16px}
+.empty{text-align:center;color:var(--muted);padding:32px 8px;font-size:15px}
+.card{background:var(--surface);border-radius:12px;overflow:hidden;scroll-margin-top:170px}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0 8px 12px;cursor:pointer;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;transition:background .15s}
+.row:active{background:var(--fill)}
+.row:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+.thumb{width:44px;height:44px;background:#fff;border-radius:11px;background:var(--stage);display:grid;place-items:center;overflow:hidden;flex:none}
+.thumb img{width:100%;height:100%;object-fit:contain}
+.info{min-width:0;display:grid;gap:2px}
+.num{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.name{font-weight:600;font-size:15px;line-height:1.2;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok-ink)}.pill.miss{background:var(--miss-bg);color:var(--miss-ink)}.pill.none{background:var(--none-bg);color:var(--muted)}
+.detail{border-top:.5px solid var(--line);padding:10px 10px 12px;display:grid;gap:10px}
+.lbl{font-size:13px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);margin-bottom:6px;display:block}
+.v3d{position:relative;aspect-ratio:1/1;max-height:62vh;width:100%;max-width:100%;border-radius:14px;background:radial-gradient(110% 85% at 50% 38%,var(--surface) 0%,var(--stage) 70%);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.v3d .gl{position:absolute;inset:0;width:100%!important;height:100%!important;cursor:grab;touch-action:none}
+.v3d .gl:active{cursor:grabbing}
+.v3d .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:12px;color:var(--muted);pointer-events:none}
+.v3d .wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:15px}
+.media{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (min-width:560px){.media{grid-template-columns:1fr 1fr}}
+.photo{position:relative;aspect-ratio:1/1;width:100%;max-width:100%;border-radius:14px;background:var(--stage);overflow:hidden;display:grid;place-items:center}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.photo .take{display:grid;gap:8px;justify-items:center;color:var(--accent);font-size:16px;font-weight:500;cursor:pointer;padding:24px;text-align:center}
+.photo .take svg{width:36px;height:36px}
+.photo .redo{position:absolute;right:8px;bottom:8px;height:32px;padding:0 12px;border-radius:16px;background:var(--bar);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--accent);font-size:14px;font-weight:600;display:inline-flex;align-items:center;cursor:pointer}
+.photo{background:#fff}
+.photo img{object-fit:contain}
+.photo .none{color:#8e8e93;font-size:15px}
+.photo .tag{position:absolute;left:10px;top:10px;font-size:12px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:10px}
+.photo.busy::after{content:"Загружаю фото…";position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--surface) 70%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--fg);font-weight:600}
+.viewer{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 52px) 12px calc(env(safe-area-inset-bottom,0px) + 12px)}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.viewer button{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;height:34px;padding:0 16px;border-radius:17px;border:0;background:rgba(255,255,255,.18);color:#fff;font:inherit;font-size:15px;font-weight:600}
+.colors{display:grid;justify-items:center;gap:10px;margin-top:-2px}
+.cname{font-size:15px;color:var(--fg)}.cname span{color:var(--muted)}
+.sw{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.sw button{width:30px;height:30px;border-radius:50%;border:0;padding:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.16);position:relative}
+.sw button[aria-pressed="true"]::after{content:"";position:absolute;inset:-5px;border-radius:50%;box-shadow:0 0 0 2px var(--accent)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px;background:var(--fill);border-radius:10px}
+.seg button{height:40px;border-radius:8px;border:0;background:none;color:var(--fg);font:inherit;font-weight:500;font-size:16px;cursor:pointer;transition:background .2s,color .2s}
+.seg button[aria-pressed="true"]{background:var(--seg-on);box-shadow:0 3px 8px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04);font-weight:600}
+.seg button[aria-pressed="true"].s-ok{color:var(--ok-ink)}.seg button[aria-pressed="true"].s-miss{color:var(--miss-ink)}
+.gh{display:flex;justify-content:space-between;align-items:baseline;padding:14px 4px 2px;font-size:13px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+.gh b{font-weight:600;color:var(--fg)}
+.gh span{font-variant-numeric:tabular-nums;text-transform:none}
+.gh:first-child{padding-top:2px}
+.about{display:grid;gap:8px;font-size:15px;line-height:1.4}
+.about p{margin:0}
+.about b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);font-weight:600;margin-bottom:2px}
+.about .wn{color:#ff9500;font-weight:700}
+.meta .rl{color:var(--fg);opacity:.75}
+.rw{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding-right:10px}
+.card.st-ok{box-shadow:inset 4px 0 0 var(--ok)}.card.st-miss{box-shadow:inset 4px 0 0 var(--miss)}.card.st-part{box-shadow:inset 4px 0 0 #ff9500}
+.qk{display:flex;align-items:center;gap:4px}
+.qk button{width:40px;height:40px;border-radius:10px;border:0;background:var(--fill);color:var(--muted);font:inherit;font-size:20px;font-weight:600;cursor:pointer;display:grid;place-items:center}
+.qk button.q-ok[aria-pressed="true"]{background:var(--ok);color:#fff}
+.qk button.q-miss[aria-pressed="true"]{background:var(--miss);color:#fff}
+.qk .qn{min-width:46px;height:40px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:inherit;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;padding:0 6px}
+.qk .qn.ok{background:var(--ok);color:#fff}.qk .qn.miss{background:var(--miss);color:#fff}.qk .qn.part{background:#ff9500;color:#fff}
+.qk .pm{width:34px;color:var(--accent)}
+.cnt{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.cnt>button{height:44px;padding:0 14px;border-radius:10px;border:0;background:var(--fill);color:var(--fg);font:inherit;font-size:16px;font-weight:500;cursor:pointer}
+.cnt>button[aria-pressed="true"][data-cnt="0"]{background:var(--miss-bg);color:var(--miss-ink);font-weight:600}
+.cnt>button[aria-pressed="true"][data-cnt="all"]{background:var(--ok-bg);color:var(--ok-ink);font-weight:600}
+.cnt .stp{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;height:44px;border-radius:10px;background:var(--fill)}
+.cnt .stp button{height:44px;border:0;background:none;color:var(--accent);font-size:24px;cursor:pointer}
+.cnt .stp span{text-align:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.pill.part{background:rgba(255,149,0,.16);color:#c93400}
+.field{width:100%;border:0;background:var(--fill);color:var(--fg);border-radius:10px;padding:10px 12px;font:inherit;font-size:17px;min-height:84px;resize:vertical;line-height:1.35}
+.field::placeholder{color:var(--muted)}
+.saved{font-size:13px;color:var(--muted);min-height:17px;margin-top:4px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:var(--fg);padding:12px 18px;border-radius:14px;font-size:15px;font-weight:500;z-index:30;max-width:calc(100% - 32px);box-shadow:0 8px 30px rgba(0,0,0,.18)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.net{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:4px}
+.net i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.net.off i{background:#ff9500}.net.busy i{background:var(--accent)}.net.err i{background:var(--miss)}
+.net button{border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:600;padding:0 0 0 4px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div><h1>Оборудование</h1><div class="sub" id="sub">Загружаю список…</div><div class="net" id="net"><i></i><span id="netTxt">Проверяю связь…</span><button type="button" id="syncBtn" hidden>Отправить</button></div></div>
+    <div><div class="bar" aria-hidden="true"><i class="b-ok" id="bOk"></i><i class="b-miss" id="bMiss"></i></div><div class="stats" id="stats"></div></div>
+    <input class="search" id="q" type="search" placeholder="Поиск" aria-label="Поиск по названию">
+  </div>
+</header>
+<main><div class="wrap"><div class="note" id="note" hidden></div><div id="list"></div><div class="empty" id="empty" hidden></div></div></main>
+<div class="toast" id="toast" hidden></div>
+<div class="viewer" id="viewer" hidden><button type="button" id="vClose">Закрыть</button><img id="vImg" alt=""></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+/* ================= 3D models, modelled from reference photos ================= */
+let T=null;
+const lin=c=>new T.Color(c).convertSRGBToLinear();
+const M=(c,o)=>{o=Object.assign({},o||{});if(o.emissive!=null)o.emissive=lin(o.emissive);return new T.MeshStandardMaterial(Object.assign({color:lin(c),roughness:.5,metalness:.05,envMapIntensity:.6},o))};
+const MT=(map,o)=>new T.MeshStandardMaterial(Object.assign({map,roughness:.5,metalness:.05,envMapIntensity:.6},o||{}));
+const chrome=()=>M(0xc9ccd1,{metalness:.95,roughness:.22});
+const alu=c=>M(c||0xb9bdc3,{metalness:.85,roughness:.35});
+const rubber=c=>M(c||0x141416,{roughness:.85});
+const gold=()=>M(0xd8b04a,{metalness:.9,roughness:.25});
+const glassM=c=>M(c||0x1b2440,{metalness:.7,roughness:.04,emissive:0x05070d});
+const ledM=c=>M(c,{emissive:c,emissiveIntensity:.9});
+function at(o,x,y,z){o.position.set(x,y,z);return o}
+function box(w,h,d,m){return new T.Mesh(new T.BoxGeometry(w,h,d),m)}
+function cyl(r1,r2,h,m,s){return new T.Mesh(new T.CylinderGeometry(r1,r2,h,s||48),m)}
+function cylZ(r1,r2,h,m,s){const c=cyl(r1,r2,h,m,s);c.rotation.x=Math.PI/2;return c}
+function cylX(r1,r2,h,m,s){const c=cyl(r1,r2,h,m,s);c.rotation.z=Math.PI/2;return c}
+function tor(r,t,m,s){return new T.Mesh(new T.TorusGeometry(r,t,12,s||64),m)}
+function torY(r,t,m){const o=tor(r,t,m);o.rotation.x=Math.PI/2;return o}
+function plane(w,h,m){return new T.Mesh(new T.PlaneGeometry(w,h),m)}
+function rr(w,d,r){const s=new T.Shape(),x=-w/2,z=-d/2;r=Math.max(.0005,Math.min(r,w/2-1e-4,d/2-1e-4));
+  s.moveTo(x+r,z);s.lineTo(x+w-r,z);s.quadraticCurveTo(x+w,z,x+w,z+r);s.lineTo(x+w,z+d-r);s.quadraticCurveTo(x+w,z+d,x+w-r,z+d);
+  s.lineTo(x+r,z+d);s.quadraticCurveTo(x,z+d,x,z+d-r);s.lineTo(x,z+r);s.quadraticCurveTo(x,z,x+r,z);return s}
+/* rounded block: footprint w×d, corner radius r, height h, base at y=0 */
+function rbox(w,h,d,r,m,bev){const b=bev==null?Math.min(.02,h/5):bev;
+  const g=new T.ExtrudeGeometry(rr(w-2*b,d-2*b,r-b),{depth:Math.max(1e-4,h-2*b),bevelEnabled:b>0,bevelSize:b,bevelThickness:b,bevelSegments:3,curveSegments:10});
+  g.rotateX(-Math.PI/2);g.translate(0,b,0);return new T.Mesh(g,m)}
+/* knurled / ribbed ring around Y, base at y=0 */
+function ribbed(r,depth,h,teeth,m){const s=new T.Shape(),n=teeth*2;
+  for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,q=i%2?r-depth:r;i?s.lineTo(Math.cos(a)*q,Math.sin(a)*q):s.moveTo(Math.cos(a)*q,Math.sin(a)*q)}
+  const g=new T.ExtrudeGeometry(s,{depth:h,bevelEnabled:false,curveSegments:2});g.rotateX(-Math.PI/2);return new T.Mesh(g,m)}
+/* canvas textures */
+const TEX=new Map();
+function ctex(key,w,h,draw){if(TEX.has(key))return TEX.get(key);const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;TEX.set(key,t);return t}
+const stripeTex=()=>ctex('stripe',512,256,(g,w,h)=>{g.fillStyle='#141416';g.fillRect(0,0,w,h);g.strokeStyle='#4a4b50';g.lineWidth=7;for(let x=-h;x<w+h;x+=22){g.beginPath();g.moveTo(x,h);g.lineTo(x+h*.75,0);g.stroke()}});
+const meshTex=(k,bg,hole,step,r)=>ctex('mesh'+k,256,256,(g,w,h)=>{g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=hole;for(let y=step/2,j=0;y<h;y+=step*.87,j++)for(let x=(j%2?step:step/2);x<w;x+=step){g.beginPath();g.arc(x,y,r,0,7);g.fill()}});
+const slotTex=(k,bg,slot,n)=>ctex('slot'+k,256,256,(g,w,h)=>{g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=slot;const s=w/n;for(let i=0;i<n;i++)g.fillRect(i*s+s*.3,h*.08,s*.4,h*.84)});
+const railTex=()=>ctex('rail',64,512,(g,w,h)=>{g.fillStyle='#2b2c30';g.fillRect(0,0,w,h);g.fillStyle='#0a0a0b';for(let i=0;i<36;i++)g.fillRect(w*.35,i*h/36+4,w*.3,h/36*.45)});
+function feet(g,xs,zs,r,h){xs.forEach(x=>zs.forEach(z=>g.add(at(cyl(r,r*.9,h,rubber(),24),x,-h/2+.0005,z))))}
+function lensFront(g,x,y,z,rO,col){g.add(at(cylZ(rO,rO,.05,rubber(0x0d0d0f)),x,y,z+.02));g.add(at(cylZ(rO*.82,rO*.82,.02,glassM(col)),x,y,z+.036));
+  g.add(at(cylZ(rO*.45,rO*.45,.01,M(0x3a2a55,{metalness:.8,roughness:.02})),x,y,z+.042))}
+function bnc(jacket,s){s=s||1;const g=new T.Group();
+  g.add(at(cyl(.0055*s,.0055*s,.012*s,chrome(),32),0,0,0));g.add(at(ribbed(.0068*s,.0005*s,.008*s,24,chrome()),0,-.006*s,0));
+  g.add(at(cyl(.0035*s,.0035*s,.008*s,chrome(),24),0,.01*s,0));g.add(at(cyl(.0012*s,.0012*s,.004*s,gold()),0,.015*s,0));
+  g.add(at(cyl(.005*s,.0035*s,.022*s,jacket,24),0,-.017*s,0));return g}
+function hdmiPlug(jacket,dp,mini){const g=new T.Group(),w=mini?.011:dp?.019:.021;
+  g.add(at(rbox(w*1.15,.034,.011,.003,jacket,.0015),0,-.034,0));
+  g.add(at(box(w,.012,.0045,chrome()),0,.006,0));g.add(at(box(w*.8,.008,.002,M(0x050505)),0,.006,.0006));
+  if(dp)g.add(at(box(.006,.008,.002,jacket),0,-.012,.0065));
+  g.add(at(cyl(.0045,.0032,.014,jacket,20),0,-.041,0));return g}
+function velcro(){const t=new T.Mesh(new T.TorusGeometry(.012,.004,6,24),M(0xd33a2c,{roughness:.8}));t.scale.set(1,2.2,1);return t}
+
+const B={
+ exell(o){const g=new T.Group(),W=.48,H=.165,D=.40;
+  g.add(rbox(W,H,D,.02,M(o.c,{roughness:.38})));
+  g.add(at(plane(W-.012,H-.03,MT(stripeTex(),{roughness:.6})),0,H/2,D/2+.0015));
+  g.add(at(cylZ(.058,.058,.012,M(0xc79a55,{metalness:.9,roughness:.25})),.07,H/2,D/2+.006));
+  lensFront(g,.07,H/2,D/2,.044,0x2a1e18);
+  const top=plane(.08,.08,MT(slotTex('ex','#e9e9ea','#9a9ca0',10)));top.rotation.x=-Math.PI/2;g.add(at(top,-.13,H+.0012,.05));
+  const side=plane(D*.6,H*.6,MT(slotTex('ex2','#ececed','#a7a9ad',16)));side.rotation.y=-Math.PI/2;g.add(at(side,-W/2-.0015,H/2,0));
+  feet(g,[-W*.38,W*.38],[-D*.36,D*.36],.012,.012);return g},
+ appo(o){const g=new T.Group(),W=.56,H=.22,D=.56;
+  g.add(rbox(W,H,D,.03,M(o.c,{roughness:.75})));
+  const gr=MT(meshTex('ap','#202124','#050505',16,4.5),{roughness:.8});
+  [-1,1].forEach(s=>g.add(at(plane(.15,.13,gr),s*.18,H*.5,D/2+.0015)));
+  g.add(at(cylZ(.085,.085,.02,M(0x2a2b2e,{roughness:.6})),0,H*.5,D/2+.01));
+  g.add(at(tor(.075,.007,chrome()),0,H*.5,D/2+.022));g.add(at(tor(.064,.006,M(0xe9ecef,{roughness:.3})),0,H*.5,D/2+.024));
+  lensFront(g,0,H*.5,D/2+.01,.055,0x1c2a55);
+  g.add(at(plane(.05,.012,M(0x0b0b0c,{emissive:0x101830})),.2,.035,D/2+.0016));
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++)g.add(at(cyl(.007,.007,.004,M(0x3a3b3f),16),-.12+i*.022,H+.002,-.1+j*.022));
+  feet(g,[-W*.4,W*.4],[-D*.38,D*.38],.018,.03);return g},
+ sonnoc(o){const g=new T.Group(),W=.53,H=.21,D=.55,white=o.c===0xf1f1f1;
+  g.add(rbox(W,H,D,.06,M(o.c,{roughness:white?.35:.7}),.025));
+  const groove=M(white?0xd2d3d6:0x0b0b0d,{roughness:.8});
+  [-1,1].forEach(s=>{for(let i=0;i<9;i++)g.add(at(box(.006,H*.62,.008,groove),s*(W/2-.001),H*.5,-.16+i*.035))});
+  g.add(at(cylZ(.1,.1,.02,M(white?0xdedfe1:0x151517,{roughness:.6})),0,H*.52,D/2-.002));
+  lensFront(g,0,H*.52,D/2-.004,.07,0x182240);
+  feet(g,[-W*.38,W*.38],[-D*.36,D*.36],.024,.035);return g},
+ bmcam(){const g=new T.Group(),W=.083,H=.066,D=.072,body=M(0x17171a,{roughness:.55,metalness:.3});
+  g.add(rbox(W,H,D,.004,body,.002));
+  for(let i=0;i<7;i++)[-1,1].forEach(s=>g.add(at(box(.004,.0035,D*.7,body),s*(W/2+.0015),.012+i*.0065,-.004)));
+  g.add(at(box(W*.98,H*.98,.004,M(0x1d1d20,{roughness:.4,metalness:.3})),0,H/2,D/2+.001));
+  g.add(at(cylZ(.0235,.0235,.006,chrome()),0,H/2,D/2+.005));g.add(at(cylZ(.019,.019,.008,rubber(0x050505)),0,H/2,D/2+.006));
+  g.add(at(cylZ(.0145,.0145,.002,M(0x26292e,{metalness:.6,roughness:.3})),0,H/2,D/2+.002));
+  g.add(at(box(.012,.003,.001,ledM(0xff2d20)),-.03,H-.006,D/2+.0035));
+  [-.018,0].forEach(x=>{g.add(at(cylZ(.0045,.0045,.009,chrome(),20),x,.02,-D/2-.004));g.add(at(cylZ(.0022,.0022,.011,rubber()),x,.02,-D/2-.005))});
+  g.add(at(box(.016,.006,.004,chrome()),.022,.045,-D/2-.001));g.add(at(cylZ(.004,.004,.004,rubber()),.025,.018,-D/2-.002));
+  g.add(at(cyl(.004,.004,.002,chrome(),16),0,H+.001,0));[-1,1].forEach(s=>g.add(at(cyl(.0025,.0025,.002,chrome(),12),s*.025,H+.001,0)));
+  [0,1,2].forEach(i=>g.add(at(box(.0012,.004,.004,M(0x2c2c30)),W/2+.0035,.04,.012-i*.008)));return g},
+ decklink(){const g=new T.Group();
+  g.add(box(.168,.0016,.111,M(0x1f8a43,{roughness:.45})));
+  for(let i=0;i<34;i++)g.add(at(box(.0012,.0018,.006,gold()),-.02+i*.0026,0,-.058));
+  g.add(at(box(.07,.012,.06,M(0x1a1a1c,{metalness:.5})),.005,.007,0));
+  for(let i=0;i<14;i++)g.add(at(box(.07,.012,.0015,M(0x2a2a2d,{metalness:.6})),.005,.013,-.027+i*.004));
+  g.add(at(cyl(.022,.022,.006,rubber(0x0b0b0c)),.005,.022,0));g.add(at(cyl(.007,.007,.007,M(0x333336)),.005,.023,0));
+  for(let i=0;i<9;i++){const b=box(.018,.001,.006,M(0x222225));b.rotation.y=i/9*Math.PI*2;g.add(at(b,.005,.026,0))}
+  const br=alu(0xcfd2d6);g.add(at(box(.002,.12,.11,br),.085,.055,0));g.add(at(box(.012,.002,.11,br),.09,.115,0));
+  for(let i=0;i<4;i++){g.add(at(cylX(.0055,.0055,.02,chrome(),20),.094,.022,-.036+i*.024));g.add(at(cylX(.0022,.0022,.022,rubber(0x0b0b0c),16),.095,.022,-.036+i*.024))}
+  g.add(at(box(.004,.006,.016,M(0x111111)),.088,.045,0));
+  [[-.05,.03],[-.045,-.03],[.06,-.03]].forEach(([x,z])=>g.add(at(box(.018,.003,.018,M(0x111113)),x,.0025,z)));return g},
+ helios(o){const g=new T.Group(),black=M(0x111113,{roughness:.45,metalness:.3}),silver=o.c===0xc8cbd0,bod=M(o.c,{roughness:.35,metalness:silver?.85:.3});
+  g.add(at(cyl(.021,.021,.008,chrome(),40),0,.004,0));
+  g.add(at(cyl(.027,.027,.01,bod),0,.013,0));
+  g.add(at(ribbed(.03,.0018,.014,48,black),0,.018,0));
+  g.add(at(cyl(.0285,.0285,.004,M(0x101012)),0,.034,0));
+  g.add(at(ribbed(.029,.0012,.008,36,bod),0,.036,0));
+  g.add(at(cyl(.03,.03,.018,M(0x0f0f11,{roughness:.4,metalness:.3})),0,.053,0));
+  g.add(at(cyl(.0305,.0305,.003,M(0x2a7a4a)),0,.046,0));
+  g.add(at(cyl(.024,.024,.002,glassM(0x2a1d3d)),0,.0625,0));g.add(at(torY(.026,.0015,black),0,.0625,0));
+  const w=new T.Group();w.add(g);w.rotation.x=Math.PI/2;return w},
+ nokton(){const g=new T.Group(),black=M(0x0e0e10,{roughness:.32,metalness:.55});
+  g.add(at(cyl(.023,.023,.006,chrome()),0,.003,0));
+  g.add(at(cyl(.029,.029,.012,black),0,.012,0));
+  g.add(at(cyl(.0292,.0292,.002,M(0xd02020)),0,.019,0));
+  g.add(at(ribbed(.03,.0012,.012,40,black),0,.02,0));
+  g.add(at(cyl(.0295,.0295,.012,black),0,.038,0));
+  g.add(at(ribbed(.031,.0014,.02,64,black),0,.044,0));
+  g.add(at(cyl(.0295,.031,.012,black),0,.07,0));
+  g.add(at(cyl(.025,.025,.002,glassM(0x1a3a3a)),0,.0765,0));
+  const w=new T.Group();w.add(g);w.rotation.x=Math.PI/2;return w},
+ sonnoclens(){const g=new T.Group(),black=M(0x121214,{roughness:.4,metalness:.4});
+  g.add(at(cyl(.045,.045,.02,chrome()),0,.01,0));g.add(at(cyl(.05,.05,.05,black),0,.045,0));g.add(at(ribbed(.053,.0015,.03,60,black),0,.045,0));
+  g.add(at(cyl(.05,.058,.06,black),0,.12,0));g.add(at(cyl(.05,.05,.002,glassM(0x1a2650)),0,.151,0));
+  const w=new T.Group();w.add(g);w.rotation.x=Math.PI/2;return w},
+ ndfilter(){const g=new T.Group(),black=M(0x121214,{roughness:.4,metalness:.5});
+  g.add(ribbed(.04,.0015,.006,90,black));g.add(at(cyl(.039,.039,.004,black),0,.008,0));g.add(at(ribbed(.0405,.0015,.006,90,black),0,.01,0));
+  g.add(at(cyl(.036,.036,.002,M(0x2b2a30,{metalness:.3,roughness:.03,transparent:true,opacity:.72})),0,.009,0));
+  g.add(at(box(.006,.004,.012,black),.044,.013,0));
+  const w=new T.Group();w.add(g);w.rotation.x=Math.PI/2.4;return w},
+ bnccoil(o){const g=new T.Group(),jacket=M(0x151517,{roughness:.6});
+  for(let i=0;i<o.turns;i++){const t=tor(.13+i*.0025,.0035,jacket,96);t.rotation.x=Math.PI/2+(i%2?.04:-.04);t.position.y=i*.0072;g.add(t)}
+  [.13,-.13].forEach(z=>g.add(at(velcro(),0,o.turns*.0035,z)));
+  [[-.14,.02,.04,-1.2],[-.145,.015,-.05,-1.0]].forEach(([x,y,z,r])=>{const b=bnc(jacket);b.rotation.z=r;g.add(at(b,x,y,z))});return g},
+ bncshort(){const g=new T.Group(),jacket=M(0x151517,{roughness:.6});
+  const c=new T.CatmullRomCurve3([new T.Vector3(-.09,0,0),new T.Vector3(-.03,.035,.01),new T.Vector3(.03,-.03,-.01),new T.Vector3(.09,0,0)]);
+  g.add(new T.Mesh(new T.TubeGeometry(c,60,.0028,10,false),jacket));
+  [-1,1].forEach(s=>{const b=bnc(jacket,.7);b.rotation.z=-s*Math.PI/2;g.add(at(b,s*.105,0,0))});return g},
+ hdmicoil(o){const g=new T.Group(),jacket=M(0x18181a,{roughness:.55});
+  for(let i=0;i<o.turns;i++){const t=tor(.15+i*.003,.0032,jacket,96);t.rotation.x=Math.PI/2+(i%2?.05:-.05);t.position.y=i*.0068;g.add(t)}
+  g.add(at(velcro(),0,o.turns*.0034,.15));
+  [[-.16,.02,.05,-1.3],[-.165,.01,-.06,-1.05]].forEach(([x,y,z,r])=>{const p=hdmiPlug(jacket,false);p.rotation.z=r;g.add(at(p,x,y,z))});return g},
+ dpshort(){const g=new T.Group(),jacket=M(0x1c1c1e,{roughness:.55});
+  const c=new T.CatmullRomCurve3([new T.Vector3(-.12,0,0),new T.Vector3(-.04,.06,.02),new T.Vector3(.05,-.05,-.02),new T.Vector3(.12,0,0)]);
+  g.add(new T.Mesh(new T.TubeGeometry(c,60,.0032,10,false),jacket));
+  [-1,1].forEach(s=>{const p=hdmiPlug(jacket,true);p.rotation.z=-s*Math.PI/2;g.add(at(p,s*.16,0,0))});return g},
+ dongle(o){const g=new T.Group(),sh=M(0x1d1d20,{roughness:.5});
+  g.add(rbox(.04,.012,.024,.004,sh,.002));g.add(at(box(.02,.006,.002,M(0x050505)),0,.006,.0125));g.add(at(box(.014,.003,.0015,chrome()),0,.006,.0128));
+  const c=new T.CatmullRomCurve3([new T.Vector3(0,.006,-.012),new T.Vector3(0,.006,-.05),new T.Vector3(.01,.006,-.09)]);g.add(new T.Mesh(new T.TubeGeometry(c,20,.0025,8,false),sh));
+  const p=hdmiPlug(sh,!o.mini,o.mini);p.rotation.x=Math.PI/2;g.add(at(p,.01,.006,-.13));return g},
+ edid(){const g=new T.Group();g.add(rbox(.032,.014,.05,.003,alu(0x2a2b2f),.0015));
+  g.add(at(box(.016,.006,.012,chrome()),0,.007,.031));g.add(at(box(.018,.008,.003,M(0x111111)),0,.007,-.026));g.add(at(box(.004,.002,.001,ledM(0x30d158)),.01,.0142,.01));return g},
+ minipc(o){const g=new T.Group(),W=o.w||.13,H=o.h||.05;
+  g.add(rbox(W,H,W*.97,.018,M(o.c,{metalness:.55,roughness:.38}),.004));g.add(at(rbox(W-.006,.0015,W*.97-.006,.016,M(o.top||0x222326,{roughness:.6,metalness:.2}),0),0,H-.001,0));
+  const f=W*.97/2+.0005;[[-.035,.02,.012,.006],[-.018,.02,.012,.006],[0,.02,.009,.004],[.014,.02,.009,.004]].forEach(([x,y,w,h])=>g.add(at(box(w,h,.002,M(0x060607)),x,y,f)));
+  g.add(at(cylZ(.0025,.0025,.002,M(0x0a0a0a)),.03,.02,f));g.add(at(cylZ(.004,.004,.002,alu(0x8d9096)),.045,.02,f));
+  feet(g,[-W*.38,W*.38],[-W*.38,W*.38],.006,.003);return g},
+ server(){const g=new T.Group(),W=.43,H=.177,D=.5;
+  g.add(at(box(W,H,D,M(0x161719,{metalness:.45,roughness:.5})),0,H/2,0));
+  g.add(at(plane(W*.7,H*.8,MT(meshTex('srv','#2a2b2f','#060607',10,3.2),{metalness:.4})),-.02,H/2,D/2+.002));
+  [-1,1].forEach(s=>{g.add(at(box(.02,H,.004,alu(0xd5d8dc)),s*(W/2+.01),H/2,D/2-.002));g.add(at(box(.012,H*.55,.03,alu()),s*(W/2-.02),H/2,D/2+.015))});
+  g.add(at(cylZ(.006,.006,.003,M(0x111111,{emissive:0x0a3a80})),.17,H*.75,D/2+.002));
+  [0,1].forEach(i=>g.add(at(box(.012,.005,.002,M(0x050505)),.17,H*.45-i*.012,D/2+.002)));return g},
+ rpi(){const g=new T.Group(),chr=chrome(),blk=M(0x111113);
+  g.add(rbox(.085,.0014,.056,.003,M(0x1a7a3c,{roughness:.5}),0));
+  g.add(at(box(.014,.0018,.014,M(0xb7bbc0,{metalness:.9,roughness:.35})),-.01,.0018,-.004));
+  [-.012,.009].forEach(z=>{g.add(at(box(.017,.016,.0133,chr),.0385,.008,z));[.012,.005].forEach(y=>g.add(at(box(.0172,.002,.009,M(0x1a3fbf)),.039,y,z)))});
+  g.add(at(box(.021,.0135,.016,chr),.034,.007,.022));
+  for(let i=0;i<20;i++)for(let j=0;j<2;j++)g.add(at(box(.0007,.0085,.0007,gold()),-.024+i*.00254,.0055,-.025+j*.00254));
+  g.add(at(box(.051,.0025,.005,blk),0,.0025,-.0238));
+  g.add(at(box(.015,.006,.011,chr),-.0055,.0035,.024));g.add(at(box(.008,.003,.006,chr),-.031,.0025,.025));
+  g.add(at(cylZ(.003,.003,.008,blk,20),.016,.004,.025));g.add(at(box(.0035,.0045,.012,M(0xf4f4f4)),-.019,.003,0));
+  g.add(at(box(.009,.0015,.009,M(0x111111)),-.012,.0015,.014));g.add(at(box(.013,.0016,.011,chr),-.03,.0018,-.008));return g},
+ microsd(){const g=new T.Group(),s=new T.Shape();s.moveTo(-.0055,-.0075);s.lineTo(.0055,-.0075);s.lineTo(.0055,.0035);s.lineTo(.0045,.0045);s.lineTo(.0045,.0055);s.lineTo(.0055,.0065);s.lineTo(.0055,.0075);s.lineTo(-.0045,.0075);s.lineTo(-.0055,.0065);s.lineTo(-.0055,-.0075);
+  g.add(new T.Mesh(new T.ExtrudeGeometry(s,{depth:.001,bevelEnabled:true,bevelSize:.0002,bevelThickness:.0002,bevelSegments:2}),M(0x161618,{roughness:.4})));
+  g.add(at(plane(.0105,.009,MT(ctex('sdlab',128,110,(c,w,h)=>{const gr=c.createLinearGradient(0,0,w,h);gr.addColorStop(0,'#d81f2a');gr.addColorStop(1,'#7a0d16');c.fillStyle=gr;c.fillRect(0,0,w,h);c.fillStyle='#fff';c.font='bold 28px Arial';c.fillText('32GB',10,52);c.font='bold 18px Arial';c.fillText('microSD HC',10,82);c.fillText('Class 10',10,102)}))),0,-.0015,.0013));
+  for(let i=0;i<8;i++)g.add(at(box(.0009,.0025,.0003,gold()),-.0042+i*.0012,.0055,-.0004));return g},
+ rack(){const g=new T.Group(),m=M(0x17181a,{roughness:.62,metalness:.25}),W=.54,H=.63,D=.5;
+  const sideM=MT(ctex('rkside',256,256,(c,w,h)=>{c.fillStyle='#17181a';c.fillRect(0,0,w,h);c.fillStyle='#050506';for(let i=0;i<7;i++){c.fillRect(30+i*30,22,14,52);c.fillRect(30+i*30,h-74,14,52)}}),{roughness:.62,metalness:.25});
+  [-1,1].forEach(s=>{g.add(at(box(.015,H-.05,D,m),s*(W/2-.0075),H/2+.04,0));const pl=plane(D-.02,H-.08,sideM);pl.rotation.y=s*Math.PI/2;g.add(at(pl,s*(W/2+.0002),H/2+.04,0))});
+  g.add(at(box(W,.015,D,m),0,H+.008,0));g.add(at(box(W,.015,D,m),0,.065,0));
+  const rail=MT(railTex(),{metalness:.4});[-1,1].forEach(s=>[-1,1].forEach(z=>g.add(at(box(.018,H-.08,.004,rail),s*(W/2-.03),H/2+.04,z*(D/2-.02)))));
+  [-1,1].forEach(s=>[-1,1].forEach(z=>{const c=new T.Group();c.add(at(box(.035,.02,.035,alu(0x9a9ea4)),0,.045,0));c.add(at(cylX(.025,.025,.02,rubber(0x2a2a2c),24),0,.025,-.006));c.add(at(cylX(.012,.012,.022,alu()),0,.025,-.006));g.add(at(c,s*(W/2-.045),0,z*(D/2-.045)))}));return g},
+ rackpanel(){const g=new T.Group(),m=M(0x1b1c1f,{metalness:.5,roughness:.4});
+  g.add(box(.483,.0445,.002,m));g.add(at(plane(.4,.03,MT(slotTex('rp','#1b1c1f','#050506',24),{metalness:.5})),0,0,.0012));
+  [-1,1].forEach(s=>[-1,1].forEach(v=>g.add(at(cylZ(.0035,.0035,.003,chrome()),s*.235,v*.016,.0015))));
+  g.add(at(box(.44,.002,.25,m),0,-.021,-.125));return g},
+ router(o){const g=new T.Group(),W=o.w,D=o.d,H=.035,ant=M(0xefeff0,{roughness:.35});
+  g.add(rbox(W,H,D,.012,M(0xf5f5f6,{roughness:.32}),.006));g.add(at(rbox(W*.7,.002,D*.55,.008,M(0xe3e3e5,{roughness:.5}),0),0,H-.0005,.005));
+  for(let i=0;i<o.leds;i++)g.add(at(box(.004,.0025,.001,ledM(i===0?0x30d158:0x0a84ff)),-W*.25+i*.012,H*.55,D/2+.0005));
+  for(let i=0;i<o.ports;i++)g.add(at(box(.015,.012,.002,M(0x2a2b2e)),-W*.3+i*.02,H*.45,-D/2-.0005));
+  const xs=o.ant===2?[-W*.38,W*.38]:[-W*.42,-W*.14,W*.14,W*.42];
+  xs.forEach((x,i)=>{const a=new T.Group();a.add(at(rbox(.022,.17,.008,.004,ant,.003),0,.004,0));a.add(cylX(.006,.006,.024,M(0xdadadc)));
+    a.rotation.z=o.ant===4?(i<2?.12:-.12):(i?-.08:.08);g.add(at(a,x,H*.6,-D/2-.006))});return g},
+ sw(o){const g=new T.Group(),W=o.w,H=.027,D=o.d;
+  g.add(rbox(W,H,D,.004,M(o.c,{metalness:o.metal?.6:.1,roughness:o.metal?.35:.45}),.002));
+  for(let i=0;i<o.ports;i++){const x=-W/2+.02+i*.0165;g.add(at(box(.0145,.0125,.002,M(0x050506)),x,H*.48,-D/2-.0006));g.add(at(box(.012,.003,.0022,chrome()),x,H*.6,-D/2-.0004));
+    g.add(at(box(.003,.002,.001,ledM(0x30d158)),x,H*.82,D/2+.0005))}
+  g.add(at(box(.004,.002,.001,ledM(0x0a84ff)),W/2-.012,H*.82,D/2+.0005));
+  feet(g,[-W*.38,W*.38],[-D*.35,D*.35],.004,.002);return g},
+ scarlett(){const g=new T.Group(),W=.482,H=.044,D=.2,red=M(0xc31f2f,{metalness:.7,roughness:.32}),blk=M(0x121214,{roughness:.55,metalness:.3});
+  g.add(at(box(.44,H,D,blk),0,H/2,-D/2));g.add(at(box(W,H,.004,red),0,H/2,.002));
+  [-1,1].forEach(s=>g.add(at(cylZ(.003,.003,.002,chrome()),s*.233,H*.5,.005)));
+  [-.19,-.155].forEach(x=>{g.add(at(cylZ(.011,.011,.004,M(0x18181a)),x,H*.5,.006));g.add(at(cylZ(.0042,.0042,.005,chrome()),x,H*.5,.007));
+    [[-.005,.004],[.005,.004],[0,-.006]].forEach(([dx,dy])=>g.add(at(cylZ(.0012,.0012,.006,M(0x050505)),x+dx,H*.5+dy,.007)))});
+  for(let i=0;i<8;i++){const x=-.12+i*.022;g.add(at(cylZ(.0065,.007,.013,M(0x1a1a1c,{roughness:.4})),x,H*.55,.011));g.add(at(box(.0012,.004,.001,M(0xffffff)),x,H*.55+.004,.0176));
+    for(let k=0;k<4;k++)g.add(at(box(.004,.0012,.001,ledM(k===3?0xff9f0a:0x30d158)),x,.006+k*.0028,.0045))}
+  g.add(at(cylZ(.013,.014,.016,M(0x1a1a1c,{roughness:.35,metalness:.4})),.105,H*.5,.012));
+  [.15,.172].forEach(x=>{g.add(at(cylZ(.0075,.0075,.004,chrome()),x,H*.5,.006));g.add(at(cylZ(.0035,.0035,.006,M(0x050505)),x,H*.5,.007))});
+  g.add(at(box(.012,.016,.004,M(0x18181a)),.205,H*.5,.006));return g},
+ amp(){const g=new T.Group(),W=.483,H=.088,D=.3;
+  g.add(at(box(.44,H,D,M(0x151618,{metalness:.5,roughness:.4})),0,H/2,-D/2));g.add(at(box(W,H,.005,M(0x1e1f22,{metalness:.6,roughness:.35})),0,H/2,.0025));
+  for(let i=0;i<8;i++){const x=-.16+i*.042;g.add(at(cylZ(.008,.009,.012,alu(0x9ea2a8)),x,H*.6,.011));
+    for(let k=0;k<4;k++)g.add(at(box(.003,.002,.001,ledM(k>2?0xff3b30:0x30d158)),x,.012+k*.005,.0056))}
+  g.add(at(box(.016,.02,.005,M(0x0a0a0b)),.2,H*.5,.006));g.add(at(box(.004,.004,.001,ledM(0x0a84ff)),.2,H*.75,.0056));
+  [-1,1].forEach(s=>g.add(at(box(.008,H*.6,.025,alu()),s*.226,H*.5,.017)));return g},
+ jbl52(o){const g=new T.Group(),W=.096,H=.144,D=.1,white=o.c===0xf4f4f4,body=M(o.c,{roughness:.55});
+  const grill=MT(meshTex('jbl'+(white?'w':'b'),white?'#efefef':'#1b1b1d',white?'#9a9a9a':'#050506',9,2.6),{roughness:.7,metalness:.2});
+  g.add(rbox(W,H,D,.016,body,.006));
+  const fg=new T.ShapeGeometry(rr(W-.008,H-.008,.012)),uv=fg.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(uv.getX(i)+W/2)/W*3,(uv.getY(i)+H/2)/H*4.5);
+  g.add(at(new T.Mesh(fg,grill),0,H/2,D/2+.0012));
+  [-1,1].forEach(s=>{g.add(at(cylX(.009,.009,.006,body),s*(W/2+.004),H/2,-.005));g.add(at(box(.006,.012,.07,body),s*(W/2+.007),H/2-.004,-.04))});
+  g.add(at(box(W+.02,.012,.006,body),0,H/2-.004,-.077));g.add(at(box(.05,.07,.006,body),0,H/2,-.085));return g},
+ toolbox(){const g=new T.Group();g.add(rbox(.44,.2,.22,.02,M(0x0a6cdc,{roughness:.45}),.006));g.add(at(box(.446,.012,.226,M(0x0a4fa3)),0,.2,0));
+  g.add(at(new T.Mesh(new T.TorusGeometry(.07,.009,10,24,Math.PI),rubber()),0,.21,0));
+  [-1,1].forEach(s=>g.add(at(box(.03,.03,.012,alu()),s*.15,.18,.112)));return g},
+ generic(){const g=new T.Group();g.add(rbox(.2,.08,.15,.012,M(0x8e8e93,{roughness:.5}),.004));return g}
+};
+
+/* catalog: model + colour variants (dots like on apple.com) */
+const CAT={
+ r01:{m:'exell',colors:[['Белый',0xf3f3f3]]}, r02:{m:'appo',colors:[['Тёмно-серый',0x2c2d31]]},
+ r03:{m:'bmcam'}, r04:{m:'bncshort'}, r05:{m:'bnccoil',o:{turns:8}}, r06:{m:'bnccoil',o:{turns:7}},
+ r07:{m:'decklink'}, r08:{m:'helios',colors:[['Чёрный',0x151517],['Серебристый',0xc8cbd0]]}, r09:{m:'nokton'}, r10:{m:'ndfilter'},
+ r11:{m:'rack'}, r12:{m:'rackpanel'}, r13:{m:'minipc',colors:[['Тёмно-серый',0x3b3d42]],o:{top:0x1d1e21}},
+ r14:{m:'minipc',colors:[['Чёрный',0x1d1e20]],o:{w:.115,h:.045,top:0x141416}}, r15:{m:'server'}, r16:{m:'rpi'}, r17:{m:'microsd'},
+ r18:{m:'hdmicoil',o:{turns:5}}, r19:{m:'hdmicoil',o:{turns:10}}, r20:{m:'hdmicoil',o:{turns:10}}, r21:{m:'hdmicoil',o:{turns:8}},
+ r22:{m:'dpshort'}, r23:{m:'dongle',o:{}}, r24:{m:'dongle',o:{mini:true}}, r25:{m:'hdmicoil',o:{turns:4}}, r26:{m:'edid'},
+ r27:{m:'router',o:{ant:4,leds:5,ports:5,w:.24,d:.155}}, r28:{m:'router',o:{ant:2,leds:3,ports:3,w:.17,d:.11}},
+ r29:{m:'router',o:{ant:2,leds:4,ports:4,w:.2,d:.13}}, r30:{m:'router',o:{ant:4,leds:5,ports:4,w:.22,d:.15}},
+ r31:{m:'sw',o:{ports:8,w:.16,d:.1,c:0x1c1d20,metal:true}}, r32:{m:'sw',o:{ports:5,w:.1,d:.07,c:0x1c1d20}}, r33:{m:'sw',o:{ports:5,w:.1,d:.075,c:0x232528}},
+ r34:{m:'scarlett'}, r35:{m:'amp'},
+ r36:{m:'jbl52',colors:[['Белый',0xf4f4f4,'по спецификации'],['Чёрный',0x1e1e20]]},
+ r37:{m:'toolbox'}, r38:{m:'sonnoc',colors:[['Чёрный',0x1c1d20,'по спецификации'],['Белый',0xf1f1f1]]}, r39:{m:'sonnoclens'}
+};
+const specOf=id=>CAT[id]||{m:'generic'};
+const REF={"r01": ["https://www.nwht.ru/upload/iblock/c57/nwo0qlcattjxebxhuuvcubrvezkgzwux.jpg", "https://cdn.insales-shop.ru/images/products/1/6255/956414063/Exell_EXD302Z.jpg", "https://pro-projector.ru/upload/resize_cache/webp/iblock/dd8/jqvgq9na27feva3fvty8f379v28u2mea/c0d06dffa6c311ed989f080027cc1da0_c0d06e03a6c311ed989f080027cc1da0.webp"], "r02": ["https://impult.ru/preview/r/1200x-/upload/iblock/95f/gz7qyma0lwyrk0j20zpdk8dy86hh5i1f.jpg", "https://impult.ru/preview/r/1200x-/upload/iblock/bf2/24560nlzyn8nnectacgt6dermoljvuml.jpg", "https://www.kns.ru/linkpics/appotronics-al-du855a_kod_945071-small.jpg"], "r03": ["https://www.music-expert.ru/upload/iblock/f3f/ppg49a4327ahuw1ofu2e7xqtyourib29/16892787_81fd_11ee_9f9f_0025908826f3_528c53bf_8a9f_11ee_9f9f_0025908826f3.jpeg", "https://www.bigtv.ru/storage/goodsImages/813/813272/1000x1000-813272_1.jpg", "https://proland.ru/upload/resize_cache/iblock/ae4/1280_720_1/3g2148iktnehetj6abw011cnkpqndwmd.jpg"], "r04": ["https://www.pult.ru/upload/iblock/f43/ynz8w551ws8ac4jx0v6z7x7qrg1skd8t.jpg", "https://www.allcables.ru/storage/goodsImages/622/622472/1000x1000-622472_2.jpg", "https://pixel24.ru/pictures/imageSets/2ac/919/2ac91981a9b5e31b85832f66f8ac9849/2ac91981a9b5e31b85832f66f8ac9849.800x800.webp"], "r05": ["https://www.music-expert.ru/upload/iblock/4ba/4ba4618b9ac8fe7059521cd663b274e8.jpeg", "https://impult.ru/preview/r/1200x-/upload/iblock/d18/5qgwnjo5eluxr51h3350jrpgtf573ft7.jpeg", "https://static.chipdip.ru/lib2/b/669/DOC072669082.jpg"], "r06": ["https://www.music-expert.ru/upload/iblock/4ba/4ba4618b9ac8fe7059521cd663b274e8.jpeg", "https://www.allcables.ru/storage/goodsImages/648/648604/1000x1000-739485_1.jpg", "https://www.bigtv.ru/storage/goodsImages/809/809181/1000x1000-809181_1.jpg"], "r07": ["https://tehtv.ru/upload/iblock/73c/ikhok8rdg03w77pdde51ummhuddghw5b.jpg", "https://n.cdn.cdek.shopping/images/shopping/zhSPS9qMIjnSbqCA.jpg"], "r08": ["https://ir.ozone.ru/s3/multimedia-w/c1000/6329696204.jpg", "https://ir.ozone.ru/s3/multimedia-1-3/c1000/8127743367.jpg"], "r09": ["https://xn--g1akeatic.xn--p1ai/upload/iblock/f69/f691d9d6f19cb32f8b842fc657f518c2.jpg", "https://st.aestatic.net/items-img/R/B/M/0/A9608442f1a1d472cb3cd1da978677f3b9.jpeg_960x960.jpg"], "r10": ["https://812photo.ru/upload/resize_cache/iblock/8f3/600_600_140cd750bba9870f18aada2478b24840a/8f3253aa4694c69f78d4f6bd8a6cd925.jpg", "https://812photo.ru/upload/iblock/224/58a2fmpkx35lkammal3yd8i0d3bjpee8/filtr-kf-true-color-nd2-nd32.jpg"], "r11": ["https://www.music-expert.ru/upload/iblock/d9c/d9cd94321752fd5f320c93f4c17ee749.jpg"], "r12": [], "r13": ["https://micro-line.ru/images/thumbnails/580/580/detailed/10824/48_K8YH3hGyYE_600.jpg", "https://img.ixbt.site/live/images/original/02/00/95/2023/08/12/fc78924dc4.jpg"], "r14": ["https://newmart.ru/upload/iblock/357/357951a3e0769335f4ae7d6865de0ebf.jpg", "https://newmart.ru/upload/iblock/562/562cedae2830709ab2cec44e8cb92406.jpg"], "r15": ["https://ir.ozone.ru/s3/multimedia-1/6874809553.jpg", "https://regard-store.ru/upload/iblock/ea0/beshhmqg4c3283qi5xlvymu9ksvfltt9.jpg", "https://unicomps.ru/images/detailed/359/293205_3.jpg"], "r16": ["https://static.chipdip.ru/lib/017/DOC051017751.jpg", "https://voltiq.ru/wp-content/uploads/raspberry-pi-3-model-b-plus-3.jpg"], "r17": ["https://static.onlinetrade.ru/img/users_images/476926/b/karta_pamyati_netac_p500_eco_microsdhc_32gb_class_10_uhs_i_80mb_s_nt02p500eco_032g_s_1715343172_1.jpg", "https://static.onlinetrade.ru/img/users_images/519922/b/karta_pamyati_netac_p500_extreme_pro_microsdhc_32gb_slass_10_uhs_i_100mb_s_nt02p500pro_032g_s_1769019942_3.jpg"], "r18": ["https://cdn.vseinstrumenti.ru/images/goods/elektrika-i-svet/razvetviteli-i-adaptery/14493785/1000x1000/169355669.jpg", "https://basket-40.wbbasket.ru/vol9348/part934836/934836450/images/big/1.webp"], "r19": ["https://cdn.vseinstrumenti.ru/images/goods/elektrika-i-svet/razvetviteli-i-adaptery/22649613/1000x1000/213914193.jpg", "https://anlan.ru/files/products/zdlw9l4xq5e77c17t2qaww9551df7dxh.1200x1000.jpg"], "r20": ["https://anlan.ru/files/products/karin-294700ex294700rus.1200x1000.jpg"], "r21": ["https://cdn.vseinstrumenti.ru/images/goods/elektrika-i-svet/razvetviteli-i-adaptery/1536963/1000x1000/52598289.jpg"], "r22": ["https://static.onlinetrade.ru/img/users_images/391089/b/kabel_telecom_pro_dp_dp_1.4v_8k_60hz_1m_lt_tcg750_1m_gt_1645862568_2.jpg", "https://e-first.ru/images/detailed/216/16630_2.jpg"], "r23": ["https://static.nix.ru/images/ks-is-ks-534-5736872248.jpg", "https://static.chipdip.ru/lib2/b/453/DOC082453258.jpg"], "r24": ["https://bagiracomp.ru/acats/!Nix/0000658XXX/658910p09.jpg", "https://bagiracomp.ru/acats/!Nix/0000658XXX/658910p10.jpg"], "r25": ["https://static.chipdip.ru/lib2/b/032/DOC079032216.jpg", "https://cdn.vseinstrumenti.ru/images/goods/elektrika-i-svet/razvetviteli-i-adaptery/14790371/1000x1000/171055997.jpg"], "r26": ["https://basket-46.wbbasket.ru/vol13836/part1383609/1383609114/images/big/1.webp"], "r27": ["https://cdn.mtscdn.ru/upload/iblock/895/1f9d2d68_18cd_47de_b7a7_7c5dd0147876.jpg", "https://videosist.ru/upload/iblock/e11/r72dsse21ux4pvdg3mi8g60efwtb5fz4.jpg"], "r28": ["https://static.onlinetrade.ru/img/items/m/router_netcraze_starter_nc_1121__3598067_6.jpg", "https://cdn.mtscdn.ru/upload/iblock/d2e/2f778601_8659_49c1_8072_f2385e893314.jpg"], "r29": ["https://videosist.ru/upload/iblock/73d/1tv520i3e081ffsu3ps4kg5uknli50c3.jpg", "https://pentaplex.ru/wa-data/public/shop/products/63/79/287963/images/219309/219309.970.png"], "r30": ["https://static.onlinetrade.ru/img/users_images/528614/b/wi_fi_router_keenetic_carrier_kn_1721_1773335576_1.jpg", "https://img.positronica.ru/items/2057620_v11_b.webp"], "r31": ["https://static.chipdip.ru/lib2/b/671/DOC072671341.jpg", "https://impult.ru/preview/r/1200x-/upload/iblock/adb/adb31deed802ee74f01406120f87f2a8.jpg"], "r32": ["https://asp24.ru/images/detailed/27/gs105-5-0-3.jpg", "https://profbez.pro/upload/iblock/ccc/ywgetdkqvrn0m2yst78ewqohniotbrug.jpg"], "r33": ["https://anlan.ru/images/D-Link/DGS-1005A_G1_Front.jpg", "https://i-teh.com/upload/iblock/d87/n1tydtw5q3yswn1vsye6ezqjl1g0uocr.jpg"], "r34": ["https://www.muzfox.ru/upload/iblock/075/075f69a481b72380cbc85b589ea0fb1d.jpg", "https://skifmusic.ru/thumbs/66/cf/x_1_normal_7337033dd0accad4aaeb60deac6a.webp"], "r35": ["https://muzakkord.ru/wa-data/public/shop/products/11/33/153311/images/108461/108461.750.jpg"], "r36": ["https://www.allcables.ru/storage/goodsImages/150/150000/1000x1000-150000_1.jpg", "https://www.kombik.com/resources/img/000/002/948/img_294812.jpg"], "r37": [], "r38": ["https://printer-plotter.ru/pp-assets/content/kartochki/sonnoc/snp-lu86kc/sonnoc-snp-lu86kc.jpg", "https://printer-plotter.ru/wa-data/public/shop/products/95/29/62995/images/119549/119549.750x0.jpg"], "r39": ["https://cdn21vek.by/imgproxy/large/plain/img/galleries/10076/421/10076421_793b12f8ee92187ce06e2b648d32e7d4.png", "https://soft-inc.ru/wp-content/uploads/2025/09/group-21-_convert.io_-_17_.webp"]};
+const INFO={"r01": ["проектор, средние экраны", "Лазерный проектор 5600 лм, Full HD 1920×1080, объектив со средним фокусом (1,52–2,45) и моторизованным сдвигом. Для экранов среднего размера.", "Самый лёгкий (9,8 кг) и самый тусклый из трёх моделей проекторов: 5600 лм против 8800–8900 у Appotronics и Sonnoc, разрешение 1080p вместо 1200p, объектив не меняется. Ставить туда, где картинка небольшая или в зале темно."], "r02": ["самый яркий проектор", "Инсталляционный лазерный проектор 8900 лм, WUXGA 1920×1200, зум 1,6×. Для самого большого экрана или зоны с засветкой.", "По яркости и разрешению почти не отличается от Sonnoc LU86KC (8900 и 8800 лм); разница в производителе и оптике. ⚠ В спецификации «Appotronic DU-855A», реальная модель — Appotronics AL-DU855A: сверить шильдик."], "r38": ["яркий проектор, сменная оптика", "Лазерный проектор 8800 лм, WUXGA 1920×1200, сменные объективы с моторизованным зумом, фокусом и сдвигом, резервный лазерный модуль, работа 24/7.", "Против Exell — в 1,6 раза ярче и объектив можно подобрать под дистанцию. Против Appotronics — та же яркость, но есть резервный источник света: если один модуль откажет, картинка не пропадёт."], "r39": ["объектив к Sonnoc", "Сменный объектив для Sonnoc LU86KC, по одному на каждый из 3 проекторов.", "Взят под конкретную дистанцию проекции. ⚠ Проекционное отношение SNP-A08 в открытых источниках не нашёл — сверить с паспортом: от него зависит размер картинки с места установки."], "r03": ["камера для живого видео", "Компактная студийная 4K-камера: байонет MFT, вход и выход 12G-SDI (разъёмы Micro BNC), HDMI только 1080p, питание 12 В.", "Маленькая, прячется в инсталляцию, управляется по SDI. Продаётся без объектива — для этого Гелиос и Voigtlander. ⚠ Нужен блок питания 12 В на каждую камеру."], "r04": ["переходник камера → кабель", "Короткий хвост Micro BNC → обычный BNC (гнездо), 25 см.", "На камере разъём Micro BNC, а длинные SDI-кабели — с обычным BNC. 3 шт = по одному на каждую камеру; без них длинный кабель не подключить."], "r05": ["длинная линия от камеры", "Кабель 12G-SDI BNC-BNC 27 м: 4K-видео от камеры к серверу.", "SDI держит длинные линии без потерь, в отличие от HDMI. От 1.6 отличается только длиной (27 м против 22 м): две камеры стоят дальше, одна ближе."], "r06": ["линия от ближней камеры", "Кабель 12G-SDI BNC-BNC 22 м для третьей камеры.", "Тот же кабель, что 1.5, только короче: 3 кабеля = 3 камеры."], "r07": ["ввод камер в сервер", "Плата захвата PCIe с четырьмя каналами 12G-SDI: принимает видео со всех камер в вещательный сервер.", "Одна плата закрывает 3 камеры, четвёртый канал в запасе. ⚠ Нужен свободный слот PCIe в одном из серверов 4U."], "r08": ["объектив с мягкой картинкой", "Советский объектив 58 мм f/2, резьба M42: мягкое «закрученное» размытие фона.", "Выбран ради характера изображения, а не резкости. ⚠ На камеру с байонетом MFT ставится только через переходник M42→MFT — его в списке нет. Диаметр резьбы под фильтр 49 мм."], "r09": ["светосильный объектив", "Светосильный объектив 25 мм под MFT (вероятно, Nokton f/0.95): нормальный угол обзора, снимает при слабом свете.", "Отличие от Гелиоса: угол шире (на MFT ≈50 мм против ≈116 мм в эквиваленте), резче и встаёт на камеру напрямую, без переходника."], "r10": ["регулируемый ND-фильтр", "Переменный нейтральный фильтр ND2–ND400 (1–8,6 ступени): гасит свет, чтобы не пересвечивать при открытой диафрагме.", "3 шт = по одному на камеру. ⚠ Проверить, что диаметр резьбы совпадает с объективами: у Гелиоса и Voigtlander он разный."], "r11": ["мобильная стойка 12U", "Открытый рэковый шкаф на 12 юнитов на колёсах: для серверов, звука и сети.", "2 шт: три сервера 4U уже занимают все 12U одной стойки, вторая — под звук, сеть и мини-ПК. Открытая конструкция лучше охлаждается."], "r12": ["элементы для стоек", "Дополнительные элементы для стоек TEMPO RK12W. Что именно (полки, заглушки, крепёж), в спецификации не указано.", "⚠ Уточнить у поставщика: от этого зависит, встанут ли мини-ПК, роутеры и усилитель в стойку."], "r13": ["плеер контента на экраны", "Мини-ПК: Ryzen 9 7940HS, графика Radeon 780M, 2×HDMI 2.1 + 2×USB4 — до 4 видеовыходов. Воспроизводит видео на проекторы и экраны.", "Отличие от Planio 325: процессор и графика в несколько раз мощнее, тянет 4K. Отличие от серверов: тише и меньше, но без профессиональной видеокарты."], "r14": ["компьютер-пульт", "Неттоп iRU: Ryzen 5 3500U, 8 ГБ, графика Vega 8. Для управления: расписание, запуск контента, мониторинг.", "Самый слабый компьютер в списке — для пульта его хватает. ⚠ Видео 4K на нём не проигрывать."], "r15": ["тяжёлая графика в реальном времени", "Сервер 4U: Core i7-14700K, 32 ГБ, видеокарта RTX 4000 Ada 20 ГБ (4 выхода DisplayPort). Генерация интерактивной графики, обработка камер, вывод на несколько экранов.", "Отличие от мини-ПК: профессиональная видеокарта с 20 ГБ памяти, слоты PCIe под плату захвата, формат 4U под стойку TEMPO."], "r16": ["простые контроллеры", "Одноплатные компьютеры: датчики, кнопки, свет, небольшие экраны и табло.", "Дёшево и надёжно для простых задач. ⚠ Видео только до Full HD, 4K не тянет. 6 шт = 6 карт памяти Netac."], "r17": ["система для Raspberry Pi", "Карта microSD 32 ГБ — системный диск для Raspberry Pi.", "По одной на каждый Pi. Карты — самое слабое место Pi: держите 1–2 запасные с уже записанной системой."], "r18": ["длинный HDMI 10 м", "Активный оптический HDMI-кабель 10 м: 4K без потерь там, где обычный HDMI сбоит.", "Отличие от обычного HDMI: внутри оптика, держит 4K на 10–30 м. ⚠ Кабель направленный: конец Source — к компьютеру, Display — к проектору."], "r19": ["самый длинный HDMI 2.1", "Оптический HDMI 2.1 (8K/60, 48 Гбит/с, ARC) 30 м — к самому дальнему проектору.", "Единственный в списке с указанным брендом и стандартом 2.1. От позиции 1.20 (тоже 30 м) отличается тем, что у той стандарт не указан."], "r20": ["длинный HDMI 30 м", "Активный оптический HDMI-кабель 30 м.", "Та же длина, что у FILUM, но без бренда и версии. ⚠ Проверить, что держит 4K/60. Направленный: Source — к компьютеру."], "r21": ["HDMI 20 м", "Активный оптический HDMI-кабель 20 м, 2 шт — к проекторам на средней дистанции.", "По длине между 10-метровым и 30-метровыми. ⚠ Направленный: Source — к компьютеру."], "r22": ["перемычки от видеокарты", "Короткий DisplayPort 1.4 (8K@60), 1 м — от видеокарты сервера к переходникам и мониторам в стойке.", "У RTX 4000 Ada выходы только DisplayPort, поэтому нужны DP-кабели. 6 шт — короткие перемычки внутри стойки."], "r23": ["DisplayPort → HDMI", "Переходник DisplayPort (папа) → HDMI (мама), 8K 30 Гц.", "Чтобы включить HDMI-кабель в DP-выход сервера. 8K только при 30 Гц, для 4K/60 хватает."], "r24": ["mini DisplayPort → HDMI", "Переходник mini DisplayPort → HDMI, 15 см.", "Отличие от KS-534 — разъём mini DP. 4 шт — похоже на видеокарту RTX 4000 SFF, у которой 4 выхода mini DP. ⚠ Сверить, какая карта стоит в серверах: у обычной RTX 4000 Ada полноразмерные DP."], "r25": ["короткие HDMI", "Обычные HDMI-кабели для коротких подключений: мини-ПК, мониторы, Raspberry Pi.", "Длина и версия не указаны. ⚠ Проверить, что это HDMI 2.0 или новее, иначе 4K/60 не пойдёт."], "r26": ["стабильное разрешение", "Эмулятор EDID: сообщает компьютеру «монитор подключён» с нужным разрешением, даже если проектор выключен или кабель переподключили.", "Без него при выключении проектора Windows сбрасывает раскладку экранов и контент «уезжает». 6 шт — на основные видеовыходы."], "r27": ["главный роутер", "Wi-Fi 5 AC1200, 4 гигабитных порта, 4 антенны, Mesh. Центр сети выставки.", "Единственный роутер с гигабитными портами — поэтому главный. Остальные Netcraze работают как точки Mesh."], "r28": ["простая точка 2,4 ГГц", "Wi-Fi 4 (N300), только 2,4 ГГц, порты 100 Мбит/с.", "Самый слабый роутер: для пары устройств (датчики, Raspberry Pi) или отдельной служебной сети. Не для видео."], "r29": ["точки Wi-Fi по залу", "Wi-Fi 5 AC1200, два диапазона, 2 антенны, 3 порта 100 Мбит/с, Mesh.", "4 шт расширяют Wi-Fi по залу. Отличие от Speedster: порты 100 Мбит/с — для планшетов и Pi хватает, для видео нет."], "r30": ["резервный интернет", "Wi-Fi 5 AC1200, порты 100 Мбит/с, USB для 4G-модема, резервирование интернета.", "Отличие от Netcraze: USB под модем — интернет не пропадёт, если отключат проводной. ⚠ Модема и SIM-карты в списке нет."], "r31": ["8 портов в стойке", "Неуправляемый гигабитный коммутатор на 8 портов.", "Самый большой коммутатор: соединяет серверы, мини-ПК и главный роутер."], "r32": ["5 портов", "Неуправляемый гигабитный коммутатор на 5 портов в металлическом корпусе.", "Для второй стойки или отдельной зоны. От D-Link DGS-1005 по сути не отличается — другой бренд."], "r33": ["5 портов", "Неуправляемый гигабитный коммутатор D-Link на 5 портов.", "Аналог Cudy GS105. Три коммутатора — три точки, где сходятся кабели."], "r34": ["звуковая карта", "Аудиоинтерфейс USB: 10 линейных выходов, 8 микрофонных входов, корпус 1U в стойку.", "Много выходов — можно развести разный звук по зонам и колонкам, а не один стерео на всё."], "r35": ["усилитель колонок", "Многоканальный усилитель мощности: раскачивает пассивные колонки JBL.", "8 каналов — по каналу на каждую из 6 колонок и 2 в запасе. ⚠ Модель не указана: проверить, что работает на нагрузку 16 Ом."], "r36": ["компактные колонки", "Настенные сателлиты: динамик 2,5″, 16 Ом, белые, широкое рассеивание, кронштейн с наклоном.", "⚠ Главный риск в звуке: эти колонки рассчитаны на работу с сабвуфером JBL (Control 50S/T или 40CS/T), в котором стоит кроссовер. Сабвуфера в списке нет. Без него не будет баса, и на усилителе нужно включить срез низких частот, иначе колонки можно повредить."], "r37": ["люди, не техника", "Техническое сопровождение: монтаж, настройка и дежурство во время работы выставки.", "Это услуга. Отмечать «Есть», когда назначен техник и согласован график."]};
+const warnify=t=>esc(t).replace(/⚠/g,'<span class="wn">⚠</span>');
+const SIMILAR=new Set(["r11", "r19", "r15", "r18", "r20", "r21", "r25", "r26", "r35"]);
+const BAD=new Set();const alive=a=>(a||[]).filter(u=>!BAD.has(u));
+function imgChain(el){BAD.add(el.getAttribute('src'));const list=(el.dataset.alts||'').split('|').filter(Boolean);if(list.length){el.src=list.shift();el.dataset.alts=list.join('|')}else{el.onerror=null;el.dataset.dead='1';const fb=el.dataset.fb;if(fb)el.src=fb;else el.closest('.photo')&&(el.closest('.photo').innerHTML='<span class="none">Фото не загрузилось</span>')}}
+function buildModel(id,ci){const sp=specOf(id),o=Object.assign({},sp.o||{});if(sp.colors)o.c=sp.colors[ci||0][1];
+  let g;try{g=(B[sp.m]||B.generic)(o)}catch(e){console.warn('model',id,e);g=B.generic()}
+  const bx=new T.Box3().setFromObject(g),sz=bx.getSize(new T.Vector3()),c=bx.getCenter(new T.Vector3());
+  g.position.sub(c);const w=new T.Group();w.add(g);w.scale.setScalar(2/Math.max(sz.x,sz.y,sz.z));w.rotation.set(.38,-.62,0);return w}
+
+/* ---------- renderer ---------- */
+const V={r:null,scene:null,cam:null,model:null,id:null,ci:0,host:null,raf:0,idleAt:0,dist:5.3,ptr:new Map()};
+function setupScene(r){const s=new T.Scene();
+  try{if(T.RoomEnvironment){const pm=new T.PMREMGenerator(r);s.environment=pm.fromScene(new T.RoomEnvironment(),.04).texture;pm.dispose()}}catch(e){}
+  s.add(new T.HemisphereLight(0xffffff,0x9aa0a8,s.environment?.2:.9));
+  const d=new T.DirectionalLight(0xffffff,s.environment?.9:1.1);d.position.set(3,6,5);s.add(d);
+  const r2=new T.DirectionalLight(0xffffff,.35);r2.position.set(-5,1,-4);s.add(r2);return s}
+function newRenderer(o){const r=new T.WebGLRenderer(Object.assign({antialias:true,alpha:true},o||{}));r.outputEncoding=T.sRGBEncoding;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.1;return r}
+function ensureRenderer(){
+  if(V.r)return true;if(!window.THREE)return false;T=THREE;
+  try{V.r=newRenderer()}catch(e){return false}
+  V.r.setPixelRatio(Math.min(2,window.devicePixelRatio||1));V.scene=setupScene(V.r);V.cam=new T.PerspectiveCamera(30,1,.05,60);V.cam.position.set(0,0,V.dist);
+  const el=V.r.domElement;el.className='gl';
+  el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);V.ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});V.idleAt=performance.now()+3000});
+  el.addEventListener('pointermove',e=>{const p=V.ptr.get(e.pointerId);if(!p||!V.model)return;
+    if(V.ptr.size===2){const [a,b]=[...V.ptr.values()];const d0=Math.hypot(a.x-b.x,a.y-b.y);p.x=e.clientX;p.y=e.clientY;const [c,d]=[...V.ptr.values()];const d1=Math.hypot(c.x-d.x,c.y-d.y);
+      if(d0>0&&d1>0)V.dist=Math.min(11,Math.max(2.4,V.dist*d0/d1));V.idleAt=performance.now()+3000;return}
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    V.model.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),dx*.011)).premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),dy*.011));
+    V.idleAt=performance.now()+3000});
+  const up=e=>V.ptr.delete(e.pointerId);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();V.dist=Math.min(11,Math.max(2.4,V.dist*(1+e.deltaY*.001)))},{passive:false});
+  el.addEventListener('dblclick',()=>{if(V.model){V.model.quaternion.setFromEuler(new T.Euler(.38,-.62,0));V.dist=5.3}});
+  new ResizeObserver(fit).observe(document.documentElement);return true}
+function fit(){if(!V.host||!V.r)return;const b=V.host.getBoundingClientRect();if(!b.width)return;V.r.setSize(b.width,b.height,false);V.cam.aspect=b.width/b.height;V.cam.updateProjectionMatrix()}
+function loop(){V.raf=requestAnimationFrame(loop);if(!V.model||!V.host||document.hidden)return;
+  if(performance.now()>V.idleAt&&!V.ptr.size)V.model.rotateOnWorldAxis(new T.Vector3(0,1,0),.005);
+  V.cam.position.z+=(V.dist-V.cam.position.z)*.2;V.r.render(V.scene,V.cam)}
+function mount3d(host,id,ci){
+  if(!host)return;if(!ensureRenderer()){host.querySelector('.wait').textContent='3D не поддерживается на этом устройстве';return}
+  ci=ci||0;
+  if(V.id!==id||V.ci!==ci){const q=V.model&&V.id===id?V.model.quaternion.clone():null;if(V.model)V.scene.remove(V.model);
+    V.model=buildModel(id,ci);if(q)V.model.quaternion.copy(q);else{V.dist=5.3;V.idleAt=0}V.scene.add(V.model);V.id=id;V.ci=ci}
+  V.host=host;host.querySelector('.wait')?.remove();host.prepend(V.r.domElement);fit();if(!V.raf)loop()}
+function unmount(){V.host=null;V.id=null;if(V.model){V.scene.remove(V.model);V.model=null}}
+
+const THUMBS=new Map();
+function makeThumbs(ids){if(!window.THREE)return;T=THREE;let r;try{r=newRenderer({preserveDrawingBuffer:true})}catch(e){return}
+  r.setPixelRatio(1);r.setSize(160,160);const s=setupScene(r),c=new T.PerspectiveCamera(30,1,.05,60);c.position.set(0,0,5.2);
+  ids.forEach(id=>{const k=CAT[id]?id:'_';if(THUMBS.has(k))return;const m=buildModel(id,0);s.add(m);r.render(s,c);THUMBS.set(k,r.domElement.toDataURL('image/png'));s.remove(m)});
+  r.dispose();r.forceContextLoss&&r.forceContextLoss()}
+const thumbFor=id=>THUMBS.get(CAT[id]?id:'_')||'';
+
+/* ================= checklist ================= */
+const CAT_NAME={exell:'Проекция',appo:'Проекция',sonnoc:'Проекция',bmcam:'Камера',decklink:'Плата захвата',helios:'Оптика',nokton:'Оптика',sonnoclens:'Оптика',ndfilter:'Оптика',
+ bnccoil:'SDI-кабель',bncshort:'SDI-кабель',hdmicoil:'Кабель',dpshort:'Кабель',dongle:'Адаптер',edid:'Адаптер',minipc:'Компьютер',server:'Сервер',rpi:'Компьютер',
+ microsd:'Хранение',rack:'Стойка',rackpanel:'Стойка',router:'Wi‑Fi',sw:'Коммутатор',scarlett:'Звук',amp:'Звук',jbl52:'Звук',toolbox:'Услуга',generic:'Прочее'};
+const ST={ok:'Есть',miss:'Нет',none:'Не проверено'};
+let db=null,canWrite=true,items=new Map(),open=new Set(),query='';const cards=new Map(),queues=new Map(),colorSel=new Map(),timers=new Map();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hex=n=>'#'+n.toString(16).padStart(6,'0');
+function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
+function readOnly(){canWrite=false;$('note').hidden=false;$('note').textContent='Режим просмотра: отмечать могут только участники с доступом к изменению.'}
+const API="https://script.google.com/macros/s/AKfycbwVRMCSE-iSW2vtSL-JOsewWY35LiSMo8MjR3MuMPNUF8fWx90M8rPOuINLUUC4gx324g/exec";
+const SEED=[{"id": "r01", "num": "1.1", "name": "Проектор Exell EXD302Z", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 1}, {"id": "r02", "num": "1.2", "name": "Проектор Appotronic DU-855A", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 2}, {"id": "r03", "num": "1.3", "name": "Blackmagic Micro Studio Camera 4K G2", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 3}, {"id": "r04", "num": "1.4", "name": "GS-Pro 12G SDI Micro BNC-BNC (F), чёрный, 0,25 м", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 4}, {"id": "r05", "num": "1.5", "name": "GS-Pro 12G SDI BNC-BNC, 27 м, 4K UHD 2160p30", "qty": 2, "status": "none", "fact": null, "comment": "", "pos": 5}, {"id": "r06", "num": "1.6", "name": "GS-Pro 12G SDI BNC-BNC, 22 м", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 6}, {"id": "r07", "num": "1.7", "name": "Blackmagic DeckLink 8K Pro G2, плата захвата", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 7}, {"id": "r08", "num": "1.8", "name": "Объектив Гелиос 44-2", "qty": 2, "status": "none", "fact": null, "comment": "", "pos": 8}, {"id": "r09", "num": "1.9", "name": "Объектив Voigtlander 25 мм", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 9}, {"id": "r10", "num": "1.10", "name": "Фильтр NDx 2-400", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 10}, {"id": "r11", "num": "1.11", "name": "TEMPO RK12W рэковый шкаф, 12 мест, колёса, чёрный", "qty": 2, "status": "none", "fact": null, "comment": "", "pos": 11}, {"id": "r12", "num": "1.12", "name": "Дополнительные модули для TEMPO RK12W", "qty": 5, "status": "none", "fact": null, "comment": "", "pos": 12}, {"id": "r13", "num": "1.13", "name": "Мини-ПК вещательный UM790 Pro (Ryzen 9 7940HS, 16 ГБ, SSD 512 ГБ, Radeon 780M)", "qty": 4, "status": "none", "fact": null, "comment": "", "pos": 13}, {"id": "r14", "num": "1.14", "name": "Мини-ПК управляющий Planio 325 (Ryzen 5 3500U, 8 ГБ, SSD 256 ГБ, Radeon Vega 8)", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 14}, {"id": "r15", "num": "1.15", "name": "Сервер вещательный 4U (Core i7-14700K, 32 ГБ, 1 ТБ NVMe, RTX 4000 Ada 20 ГБ)", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 15}, {"id": "r16", "num": "1.16", "name": "Raspberry Pi 3B+", "qty": 6, "status": "none", "fact": null, "comment": "", "pos": 16}, {"id": "r17", "num": "1.17", "name": "Карта памяти Netac P500 microSDHC 32 ГБ Class 10", "qty": 6, "status": "none", "fact": null, "comment": "", "pos": 17}, {"id": "r18", "num": "1.18", "name": "Активный оптический кабель, 10 м", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 18}, {"id": "r19", "num": "1.19", "name": "Активный оптический кабель FILUM HDMI 2.1, 8K/60Hz, ARC, 48 Гбит/с, 30 м", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 19}, {"id": "r20", "num": "1.20", "name": "Активный оптический кабель, 30 м", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 20}, {"id": "r21", "num": "1.21", "name": "Активный оптический кабель, 20 м", "qty": 2, "status": "none", "fact": null, "comment": "", "pos": 21}, {"id": "r22", "num": "1.22", "name": "Кабель Telecom Pro DP-DP 1.4, 8K@60Hz, 1 м (TCG750-1M)", "qty": 6, "status": "none", "fact": null, "comment": "", "pos": 22}, {"id": "r23", "num": "1.23", "name": "Адаптер KS-is DP 1.4 (M) → HDMI (F), 8K 30 Гц (KS-534)", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 23}, {"id": "r24", "num": "1.24", "name": "Адаптер KS-is 8K miniDP (M) → HDMI (F), 15 см (KS-567)", "qty": 4, "status": "none", "fact": null, "comment": "", "pos": 24}, {"id": "r25", "num": "1.25", "name": "Кабель HDMI", "qty": 9, "status": "none", "fact": null, "comment": "", "pos": 25}, {"id": "r26", "num": "1.26", "name": "HDMI-переходники EDID", "qty": 6, "status": "none", "fact": null, "comment": "", "pos": 26}, {"id": "r27", "num": "1.27", "name": "Wi-Fi роутер Netcraze Speedster NC-3013", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 27}, {"id": "r28", "num": "1.28", "name": "Wi-Fi роутер Netcraze Starter NC-1121", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 28}, {"id": "r29", "num": "1.29", "name": "Wi-Fi роутер Netcraze Explorer NC-1621", "qty": 4, "status": "none", "fact": null, "comment": "", "pos": 29}, {"id": "r30", "num": "1.30", "name": "Wi-Fi роутер Keenetic KN-1721 Carrier", "qty": 2, "status": "none", "fact": null, "comment": "", "pos": 30}, {"id": "r31", "num": "1.31", "name": "Коммутатор Cudy GS108D 4.0", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 31}, {"id": "r32", "num": "1.32", "name": "Коммутатор Cudy GS105 4.0", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 32}, {"id": "r33", "num": "1.33", "name": "Коммутатор D-Link DGS-1005", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 33}, {"id": "r34", "num": "1.34", "name": "Аудиоинтерфейс Focusrite Scarlett 18i20", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 34}, {"id": "r35", "num": "1.35", "name": "Аудиоусилитель 8 каналов", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 35}, {"id": "r36", "num": "1.36", "name": "Колонки JBL Control 52-WH", "qty": 6, "status": "none", "fact": null, "comment": "", "pos": 36}, {"id": "r37", "num": "1.37", "name": "Услуга по техническому сопровождению AV-оборудования выставки", "qty": 1, "status": "none", "fact": null, "comment": "", "pos": 37}, {"id": "r38", "num": "2.1", "name": "Проектор Sonnoc SNP-LU86KC", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 38}, {"id": "r39", "num": "2.2", "name": "Объектив Sonnoc SNP-A08", "qty": 3, "status": "none", "fact": null, "comment": "", "pos": 39}];
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+let outbox=LS.get('av.outbox',[]),seqN=LS.get('av.seq',0),lastSync=LS.get('av.lastSync',0),syncing=false,syncErr=false;
+function persist(){LS.set('av.items',[...items.values()]);LS.set('av.outbox',outbox);LS.set('av.seq',seqN)}
+function applyLocal(id,patch){const d=items.get(id);if(d){items.set(id,Object.assign({},d,patch));renderList()}}
+function write(id,patch){if(!canWrite)return Promise.reject(new Error('ro'));applyLocal(id,patch);
+  const last=outbox.length?outbox[outbox.length-1]:null;
+  if(last&&last.id===id&&!last.sending)Object.assign(last.patch,patch);else outbox.push({seq:++seqN,id,patch:Object.assign({},patch)});
+  persist();netUI();scheduleSync(800);return Promise.resolve()}
+let syncT=0;function scheduleSync(ms){clearTimeout(syncT);syncT=setTimeout(sync,ms)}
+function mergeServer(rows){const pending=new Map();outbox.forEach(o=>pending.set(o.id,Object.assign(pending.get(o.id)||{},o.patch)));
+  const seen=new Set();rows.forEach(r=>{seen.add(r.id);const cur=items.get(r.id);let n=r;
+    if(pending.has(r.id))n=Object.assign({},r,pending.get(r.id));
+    if(cur&&timers.has(r.id))n=Object.assign({},n,{comment:cur.comment});items.set(r.id,n)});
+  [...items.keys()].forEach(k=>{if(!seen.has(k)){items.delete(k);cards.delete(k)}});persist()}
+async function sync(){if(syncing)return;if(!navigator.onLine){netUI();return}syncing=true;syncErr=false;netUI();
+  try{let res;
+    if(outbox.length){const batch=outbox.slice(0,200);batch.forEach(o=>o.sending=true);
+      const r=await fetch(API,{method:'POST',body:JSON.stringify({ops:batch.map(o=>({seq:o.seq,id:o.id,patch:o.patch}))}),redirect:'follow'});
+      res=await r.json();if(!res.ok)throw new Error(res.error||'server');
+      const done=new Set(res.done||[]);outbox=outbox.filter(o=>!(o.sending&&done.has(o.seq)));outbox.forEach(o=>delete o.sending)}
+    else{const r=await fetch(API+'?api=items&t='+Date.now(),{redirect:'follow'});res=await r.json();if(!res.ok)throw new Error(res.error||'server')}
+    mergeServer(res.items);lastSync=Date.now();LS.set('av.lastSync',lastSync);renderList();
+    if(outbox.length)scheduleSync(300)}
+  catch(e){outbox.forEach(o=>delete o.sending);syncErr=true}
+  finally{syncing=false;netUI()}}
+function ago(t){if(!t)return 'ещё не было';const m=Math.round((Date.now()-t)/60000);return m<1?'только что':m<60?m+' мин назад':new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+function netUI(){const el=$('net'),t=$('netTxt'),b=$('syncBtn');if(!el)return;const n=outbox.length;el.className='net';
+  if(syncing){el.classList.add('busy');t.textContent='Синхронизирую…';b.hidden=true;return}
+  if(!navigator.onLine){el.classList.add('off');t.textContent=n?`Без интернета · ${n} изм. сохранены на телефоне, отправлю позже`:'Без интернета · всё сохранено на телефоне';b.hidden=true;return}
+  if(syncErr){el.classList.add('err');t.textContent=n?`Таблица недоступна · ${n} изм. ждут отправки`:'Таблица недоступна · работаю с копией на телефоне';b.hidden=false;b.textContent='Повторить';return}
+  t.textContent=n?`${n} изм. ждут отправки`:`Всё отправлено · обновлено ${ago(lastSync)}`;b.hidden=!n;b.textContent='Отправить'}
+
+
+const statusOf=d=>['ok','miss','part'].includes(d.status)?d.status:'none';
+const factOf=d=>{const n=d.fact===''||d.fact==null?NaN:+d.fact;return Number.isFinite(n)?n:null};
+function pillText(d){const s=statusOf(d),q=+d.qty||1,f=factOf(d);if(s==='part')return f==null?'Частично':`${f} из ${q}`;if(s==='ok'&&q>1)return `Есть ${q}`;return ST[s]}
+function ctlHTML(d){const s=statusOf(d),q=+d.qty||1,f=factOf(d),ro=canWrite?'':'disabled';
+  if(q<=1)return ``;
+  return `<div class="cnt" role="group" aria-label="Сколько есть"><button type="button" data-cnt="0" aria-pressed="${s==='miss'}" ${ro}>Нет</button><div class="stp"><button type="button" data-inc="-1" aria-label="Меньше" ${ro}>−</button><span>${f==null?'—':f} из ${q}</span><button type="button" data-inc="1" aria-label="Больше" ${ro}>+</button></div><button type="button" data-cnt="all" aria-pressed="${s==='ok'}" ${ro}>Все ${q}</button></div>`}
+function quickHTML(d){const s=statusOf(d),q=+d.qty||1,f=factOf(d),ro=canWrite?'':'disabled';
+  if(q<=1)return `<div class="qk"><button type="button" class="q-miss" data-st="miss" aria-pressed="${s==='miss'}" aria-label="Нет" ${ro}>✕</button><button type="button" class="q-ok" data-st="ok" aria-pressed="${s==='ok'}" aria-label="Есть" ${ro}>✓</button></div>`;
+  return `<div class="qk"><button type="button" class="pm" data-inc="-1" aria-label="Меньше" ${ro}>−</button><button type="button" class="qn ${s}" data-cnt="toggle" aria-label="Сколько есть" ${ro}>${f==null?'—':f}/${q}</button><button type="button" class="pm" data-inc="1" aria-label="Больше" ${ro}>+</button></div>`}
+function setFact(d,n){const q=+d.qty||1;n=Math.max(0,Math.min(q,n));write(d.id,{fact:n,status:n===q?'ok':n===0?'miss':'part'}).catch(()=>{})}
+const shown=()=>[...items.values()].filter(d=>d.name).sort((a,b)=>(a.pos??0)-(b.pos??0));
+function renderHead(){const all=shown(),n=all.length||1,ok=all.filter(d=>statusOf(d)==='ok').length,miss=all.filter(d=>statusOf(d)==='miss').length,part=all.filter(d=>statusOf(d)==='part').length;
+  $('bOk').style.width=(ok+part)/n*100+'%';$('bMiss').style.width=miss/n*100+'%';
+  $('stats').innerHTML=`<span>Проверено <b>${ok+miss+part}</b> из <b>${all.length}</b></span>${part?`<span><i class="dot" style="background:#ff9500"></i>Частично ${part}</span>`:''}<span><i class="dot" style="background:var(--ok)"></i>Есть ${ok}</span><span><i class="dot" style="background:var(--miss)"></i>Нет ${miss}</span>`;
+  $('sub').textContent=`${all.length} позиций · ${all.reduce((s,d)=>s+(+d.qty||0),0)} ед.`}
+function rowHTML(d){const s=statusOf(d),r=alive(REF[d.id]),t=thumbFor(d.id);
+  return `<div class="thumb">${r.length?`<img src="${esc(r[0])}" data-alts="${esc(r.slice(1).join('|'))}" data-fb="${t}" referrerpolicy="no-referrer" onerror="imgChain(this)" alt="" style="object-fit:contain;background:#fff">`:(t?`<img src="${t}" alt="">`:'')}</div><div class="info"><span class="num">№ ${esc(d.num)} · ${esc(CAT_NAME[specOf(d.id).m]||'')}</span><span class="name">${esc(d.name)}</span><span class="meta">${esc(d.qty)} шт${INFO[d.id]?` · <span class="rl">${esc(INFO[d.id][0])}</span>`:''}${(d.comment||'').trim()?' · 💬':''}</span></div>`}
+function colorLabel(c){return esc(c[0])+(c[2]?` <span>· ${esc(c[2])}</span>`:'')}
+function detailHTML(d){const s=statusOf(d),sp=specOf(d.id),ci=colorSel.get(d.id)||0,ro=canWrite?'':'disabled';
+  const colors=sp.colors&&sp.colors.length>1?`<div class="colors"><div class="cname">${colorLabel(sp.colors[ci])}</div><div class="sw" role="group" aria-label="Цвет">${sp.colors.map((c,i)=>`<button type="button" data-ci="${i}" aria-pressed="${i===ci}" aria-label="${esc(c[0])}" style="background:${hex(c[1])}"></button>`).join('')}</div></div>`:'';
+  const r=alive(REF[d.id]);const ph=r.length?`<img src="${esc(r[0])}" data-alts="${esc(r.slice(1).join('|'))}" referrerpolicy="no-referrer" onerror="imgChain(this)" alt="Фото: ${esc(d.name)}" data-view><span class="tag">${SIMILAR.has(d.id)?'Похожее фото':'Фото с сайта'}</span>`:'<span class="none">Фото нет</span>';
+  return `<div class="media"><div class="v3d" data-3d><div class="wait">Загружаю модель…</div><span class="hint">3D · крутите пальцем</span></div><div class="photo" data-photo>${ph}</div></div>${colors}${INFO[d.id]?`<div class="about"><p><b>Для чего</b>${warnify(INFO[d.id][1])}</p><p><b>Почему эта · чем отличается</b>${warnify(INFO[d.id][2])}</p></div>`:''}
+  <div><label class="lbl" for="cmt-${esc(d.id)}">Комментарий</label><textarea class="field" id="cmt-${esc(d.id)}" data-cmt placeholder="Где стоит, состояние, что не так" ${ro}>${esc(d.comment)}</textarea><div class="saved" data-saved></div></div>`}
+function buildCard(d){const el=document.createElement('article');el.className='card';el.dataset.id=d.id;el.innerHTML='<div class="rw"><button class="row" type="button" aria-expanded="false"></button><div data-q></div></div><div class="detail" hidden></div>';cards.set(d.id,el);return el}
+function paintCard(el,d,force){
+  const row=el.querySelector('.row'),det=el.querySelector('.detail'),isOpen=open.has(d.id);
+  el.className='card st-'+statusOf(d);const rh=rowHTML(d);if(row.dataset.h!==rh){row.innerHTML=rh;row.dataset.h=rh}const qe=el.querySelector('[data-q]'),qh=quickHTML(d);if(qe.dataset.h!==qh){qe.innerHTML=qh;qe.dataset.h=qh}row.setAttribute('aria-expanded',isOpen);det.hidden=!isOpen;
+  if(!isOpen){if(V.host&&det.contains(V.host))unmount();det.innerHTML='';return}
+  if(!det.innerHTML||force){det.innerHTML=detailHTML(d);mount3d(det.querySelector('[data-3d]'),d.id,colorSel.get(d.id)||0);return}
+  
+  const ta=det.querySelector('[data-cmt]');if(ta&&document.activeElement!==ta&&!timers.has(d.id)&&!queues.has(d.id)&&ta.value!==(d.comment||''))ta.value=d.comment||''}
+const GROUPS=[['Проекция',['r01','r02','r38','r39']],['Камеры и оптика',['r03','r08','r09','r10']],['Компьютеры и захват',['r13','r14','r15','r07','r16','r17']],
+ ['Сеть',['r27','r28','r29','r30','r31','r32','r33']],['Звук',['r34','r35','r36']],['Кабели и адаптеры',['r04','r05','r06','r18','r19','r20','r21','r22','r25','r23','r24','r26']],
+ ['Стойки',['r11','r12']],['Услуги',['r37']]];
+const ghEls=new Map();
+function sections(arr){const by=new Map(arr.map(d=>[d.id,d])),used=new Set(),out=[];
+  GROUPS.forEach(([t,ids])=>{const list=ids.map(k=>by.get(k)).filter(Boolean);list.forEach(d=>used.add(d.id));if(list.length)out.push([t,list])});
+  const rest=arr.filter(d=>!used.has(d.id));if(rest.length)out.push(['Прочее',rest]);return out}
+function ghText(t,list){const done=list.filter(d=>statusOf(d)!=='none').length;return `<b>${esc(t)}</b><span>${done} из ${list.length}</span>`}
+function renderList(){const list=$('list'),arr=shown().filter(d=>!query||(d.name+' '+d.num+' '+(d.comment||'')).toLowerCase().includes(query)),secs=sections(arr);
+  const next=secs.map(([t,l])=>'#'+t+'|'+l.map(d=>d.id).join('|')).join('|'),cur=list.dataset.key||'';
+  if(cur===next){secs.forEach(([t,l])=>{const h=ghEls.get(t);if(h)h.innerHTML=ghText(t,l);l.forEach(d=>paintCard(cards.get(d.id),d))})}
+  else{const f=document.createDocumentFragment();secs.forEach(([t,l])=>{let h=ghEls.get(t);if(!h){h=document.createElement('div');h.className='gh';ghEls.set(t,h)}h.innerHTML=ghText(t,l);f.appendChild(h);
+      l.forEach(d=>{const el=cards.get(d.id)||buildCard(d);paintCard(el,d);f.appendChild(el)})});list.replaceChildren(f);list.dataset.key=next}
+  const em=$('empty');if(!items.size){em.hidden=false;em.textContent=db?'Список пуст.':'Загружаю список…'}else if(!arr.length){em.hidden=false;em.textContent='Ничего не найдено.'}else em.hidden=true;
+  renderHead()}
+document.addEventListener('click',e=>{const t=e.target;if(t.id==='vClose'||t.id==='viewer'){$('viewer').hidden=true;return}
+  const vw=t.closest('[data-view]');if(vw){$('vImg').src=vw.currentSrc||vw.src;$('viewer').hidden=false;return}
+  const card=t.closest('.card');if(!card)return;const id=card.dataset.id,d=items.get(id);if(!d)return;
+  if(t.closest('.row')){if(open.has(id))open.delete(id);else{[...open].forEach(o=>{open.delete(o);const c=cards.get(o),od=items.get(o);if(c&&od)paintCard(c,od)});open.add(id)}
+    paintCard(card,d,true);if(open.has(id))setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),60);return}
+  const sw=t.closest('[data-ci]');if(sw){const ci=+sw.dataset.ci,sp=specOf(id),det=card.querySelector('.detail');colorSel.set(id,ci);
+    det.querySelectorAll('[data-ci]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.ci===ci));det.querySelector('.cname').innerHTML=colorLabel(sp.colors[ci]);
+    mount3d(det.querySelector('[data-3d]'),id,ci);return}
+  const cn=t.closest('[data-cnt]');if(cn){const q=+d.qty||1,v=cn.dataset.cnt==='toggle'?(statusOf(d)==='ok'?0:q):cn.dataset.cnt==='all'?q:0;if(cn.dataset.cnt==='toggle'){if(statusOf(d)==='miss'){write(id,{fact:'',status:'none'}).catch(()=>{});return}setFact(d,v);return}if(factOf(d)===v&&statusOf(d)!=='none')write(id,{fact:'',status:'none'}).catch(()=>{});else setFact(d,v);return}
+  const inc=t.closest('[data-inc]');if(inc){const q=+d.qty||1,f=factOf(d),st2=+inc.dataset.inc;setFact(d,f==null?(st2>0?1:q-1):f+st2);return}
+  const st=t.closest('[data-st]');if(st){const k=st.dataset.st,nx=statusOf(d)===k?'none':k;write(id,{status:nx,fact:nx==='ok'?1:nx==='miss'?0:''}).catch(()=>{})}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('viewer').hidden=true});
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='q'){query=t.value.trim().toLowerCase();renderList();return}
+  if(t.matches('[data-cmt]')){const id=t.closest('.card').dataset.id;clearTimeout(timers.get(id));timers.set(id,setTimeout(()=>saveComment(id),700))}});
+async function saveComment(id){clearTimeout(timers.get(id));const card=cards.get(id),ta=card&&card.querySelector('[data-cmt]'),sv=card&&card.querySelector('[data-saved]');
+  if(!ta){timers.delete(id);return}const val=ta.value;if((items.get(id)?.comment||'')===val){timers.delete(id);return}
+  try{await write(id,{comment:val});if(sv)sv.textContent=navigator.onLine?'Сохранено':'Сохранено на телефоне'}catch(e){if(sv)sv.textContent='Не сохранено — текст остался, повторите позже';const d=items.get(id);if(d)items.set(id,Object.assign({},d,{comment:val}))}finally{timers.delete(id)}}
+document.addEventListener('focusout',e=>{if(e.target.matches&&e.target.matches('[data-cmt]')){const id=e.target.closest('.card').dataset.id;if(timers.has(id))saveComment(id)}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)[...timers.keys()].forEach(saveComment)});
+
+(LS.get('av.items',null)||SEED).forEach(r=>items.set(r.id,r));db=true;
+if(window.THREE)makeThumbs([...items.keys()]);renderList();netUI();sync();
+setInterval(()=>{if(!document.hidden&&!(document.activeElement&&document.activeElement.matches('textarea')))sync();else netUI()},20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+addEventListener('online',()=>sync());addEventListener('offline',netUI);
+$('syncBtn').addEventListener('click',()=>sync());
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(r=>{if(r.active)r.active.postMessage({type:'warm',urls:Object.values(REF).flat()})}).catch(()=>{}));
+navigator.serviceWorker&&navigator.serviceWorker.addEventListener('controllerchange',()=>{navigator.serviceWorker.controller&&navigator.serviceWorker.controller.postMessage({type:'warm',urls:Object.values(REF).flat()})});
+</script>
+</body>
+</html>
